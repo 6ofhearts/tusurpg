@@ -1,7 +1,6 @@
 package com.tusurpg.component
 
 import com.badlogic.gdx.graphics.g2d.Animation
-import com.badlogic.gdx.graphics.g2d.TextureRegion
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 
 enum class AnimationModel {
@@ -24,6 +23,10 @@ data class AnimationComponent(
 
     fun nextAnimation(model: AnimationModel, type: AnimationType){
         this.model = model
+        nextAnimation = "${model.atlasKey}/${type.atlasKey}"
+    }
+
+    fun nextAnimation( type: AnimationType){
         nextAnimation = "${model.atlasKey}/${type.atlasKey}"
     }
 

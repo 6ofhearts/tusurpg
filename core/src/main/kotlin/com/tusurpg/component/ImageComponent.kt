@@ -1,11 +1,11 @@
 package com.tusurpg.component
 
 import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.github.quillraven.fleks.ComponentListener
+import com.tusurpg.actor.FlipImage
 
 class ImageComponent: Comparable<ImageComponent>{
-    lateinit var image: Image
+    lateinit var image: FlipImage
 
     override fun compareTo(other: ImageComponent): Int { //при пересечении изображений объектов или акторов в 2d
        val yDiff = other.image.y.compareTo(image.y)      //необходимо выполнить сравнение "местоположения", чтобы показать актора перед объектом или за ним

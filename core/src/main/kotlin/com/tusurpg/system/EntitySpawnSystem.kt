@@ -6,9 +6,9 @@ import com.badlogic.gdx.physics.box2d.BodyDef
 import com.badlogic.gdx.physics.box2d.World
 import com.badlogic.gdx.scenes.scene2d.Event
 import com.badlogic.gdx.scenes.scene2d.EventListener
-import com.badlogic.gdx.scenes.scene2d.ui.Image
 import com.badlogic.gdx.utils.Scaling
 import com.github.quillraven.fleks.*
+import com.tusurpg.actor.FlipImage
 import com.tusurpg.component.*
 import com.tusurpg.component.PhysicComponent.Companion.physicCmpFromImage
 import com.tusurpg.event.MapChangeEvent
@@ -17,6 +17,7 @@ import ktx.app.gdxError
 import ktx.box2d.box
 import ktx.math.vec2
 import ktx.tiled.*
+import kotlin.math.roundToInt
 
 @AllOf([SpawnComponent:: class])
 class EntitySpawnSystem (
@@ -36,7 +37,7 @@ class EntitySpawnSystem (
 
             world.entity{
                 add<ImageComponent>{
-                    image = Image().apply {
+                    image = FlipImage().apply {
                         setPosition(location.x, location.y)
                         setSize(relativeSize.x,relativeSize.y)
                         setScaling(Scaling.fill)
@@ -56,11 +57,51 @@ class EntitySpawnSystem (
                 }
 
 
-                physicCmpFromImage(phWorld, imageCmp.image, BodyDef.BodyType.DynamicBody){
-                    phCmp, width, height ->
-                    box(width, height){
+                physicCmpFromImage(phWorld, imageCmp.image, cfg.bodyType){
+                   phCmp, width, height ->
+
+                    val w = width*cfg.physicScaling.x
+                    val h = height*cfg.physicScaling.y
+                    phCmp.offset.set(cfg.physicOffset)
+                    phCmp.size.set(w, h)
+
+                    box(w, h, cfg.physicOffset){ //хит бокс
                         isSensor = false  //задание физики автоматически каждой сущности
+                        userData = HIT_BOX_SENSOR
                     }
+                }
+                if(cfg.speedScaling>0f) {
+                    add<MoveComponent>() { //рамка коллизии
+                        speed = DEFAULT_SPEED * cfg.speedScaling
+                    }
+                }
+
+                if(cfg.canAttack){
+                    add<AttackComponent>{
+                       maxDelay = cfg.attackDelay
+                        damage = (DEFAULT_ATTACK_DAMAGE * cfg.attackScaling).roundToInt()
+                        extraRange = cfg.attackExtraRange
+                    }
+                }
+
+                if(cfg.lifeScaling > 0f){
+                    add<LifeComponent>{
+                        max = DEFAULT_LIFE*cfg.lifeScaling
+                        life = max
+                    }
+                }
+
+                if(type == "Player"){
+                    add<PlayerComponent>()
+                }
+
+                if (cfg.lootable) {
+                    add<LootComponent>()
+                }
+
+                if (cfg.bodyType != BodyDef.BodyType.StaticBody){
+                    //создать или убрать сущности
+                    add<CollisionComponent>()
                 }
             }
 
@@ -71,8 +112,27 @@ class EntitySpawnSystem (
     private fun spawnCfg(type:String): SpawnCfg = cachedCfgs.getOrPut(type){
 
         when (type) {
-            "Player" -> SpawnCfg(AnimationModel.PLAYER)
-            "Slime" -> SpawnCfg(AnimationModel.SLIME)
+            "Player" -> SpawnCfg(
+                AnimationModel.PLAYER,
+                attackExtraRange = 0.6f,
+                attackScaling = 1.25f,
+                physicScaling = vec2(0.3f, 0.3f),
+                physicOffset = vec2(0f, -10f* UNIT_SCALE)
+            )
+            "Slime" -> SpawnCfg(
+                AnimationModel.SLIME,
+                lifeScaling = 0.75f,
+                physicScaling = vec2(0.3f, 0.3f),
+                physicOffset = vec2(0f, -2f* UNIT_SCALE)
+            )
+            "Chest"-> SpawnCfg(
+            AnimationModel.CHEST,
+            speedScaling = 0f,
+            bodyType = BodyDef.BodyType.StaticBody,
+            lifeScaling = 0f,
+                lootable = true,
+                canAttack = false
+        )
             else -> gdxError("Тип $type не предусмотрен в SpawnCfg")
         }
       //  SpawnCfg(AnimationModel.PLAYER)
@@ -105,6 +165,10 @@ class EntitySpawnSystem (
             }
         }
         return false
+    }
+
+    companion object {
+        const val HIT_BOX_SENSOR = "Hitbox"
     }
 
 }
